@@ -1,0 +1,125 @@
+openapi: 3.0.0
+info:
+  title: Currencies
+  description: Currencies API
+  version: 1.0.0
+paths:
+  /currencies:
+    get:
+      summary: Get given currencies (or their difference)
+      operationId: getCurrencies
+      parameters:
+        - name: CurrencyComparisonParameters
+          in: query
+          schema:
+            $ref: '#/components/schemas/CurrencyComparisonParameters'
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+  /currencies/speeds:
+    get:
+      summary: Get speeds of given currencies (or their difference)
+      operationId: getSpeeds
+      parameters:
+        - name: CurrencyComparisonParameters
+          in: query
+          schema:
+            $ref: '#/components/schemas/CurrencyComparisonParameters'
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+  /currencies/accelerations:
+    get:
+      summary: Get accelerations of given currencies (or their difference)
+      operationId: getAccelerations
+      parameters:
+        - name: CurrencyComparisonParameters
+          in: query
+          schema:
+            $ref: '#/components/schemas/CurrencyComparisonParameters'
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+  /currencies/shift:
+    get:
+      summary: Get minimum shift of one currency against another in the given interval
+      operationId: getMinimumShift
+      parameters:
+        - name: CurrencyShiftParameters
+          in: query
+          schema:
+            $ref: '#/components/schemas/CurrencyShiftParameters'
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: integer
+                format: int32
+
+components:
+  schemas:
+    CurrencyComparisonParameters:
+      type: object
+      allOf:
+        - properties:
+            compare:
+              description: If currencies should be compared (calculate difference of first and second)
+              type: boolean
+              example: true
+        - $ref: '#/components/schemas/CurrencyParameters'
+    CurrencyShiftParameters:
+      type: object
+      required:
+        - maximumShiftDays
+      allOf:
+        - properties:
+            maximumShiftDays:
+              description: The maximum shift amount
+              type: integer
+              format: int32
+              minimum: 1
+        - $ref: '#/components/schemas/CurrencyParameters'
+    CurrencyParameters:
+      type: object
+      required:
+        - currency1
+        - currency2
+        - dateFrom
+        - dateTo
+      properties:
+        base:
+          description: The currency in which the results are calculated (default = RUB)
+          type: string
+          example: RUB
+        currency1:
+          description: The first currency to compare
+          type: string
+          example: USD
+        currency2:
+          description: The second currency to compare
+          type: string
+          example: EUR
+        dateFrom:
+          description: The start period date
+          type: string
+          format: date
+          example: 13.04.2020
+        dateTo:
+          description: The end period date
+          type: string
+          format: date
+          example: 13.04.2020

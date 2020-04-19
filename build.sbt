@@ -4,7 +4,7 @@ version := "0.1"
 
 scalaVersion := "2.13.1"
 
-val akkaVersion = "2.6.3"
+val akkaVersion = "2.6.4"
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
@@ -21,3 +21,5 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-generic" % circeVersion,
   "io.circe" %% "circe-parser" % circeVersion
 )
+
+libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"

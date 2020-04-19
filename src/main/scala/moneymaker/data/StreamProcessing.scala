@@ -3,7 +3,10 @@ package moneymaker.data
 import akka.stream.alpakka.csv.scaladsl.CsvFormatting
 import akka.stream.scaladsl.{Flow, Sink}
 import akka.util.ByteString
+import cats.implicits._
 import moneymaker.models.Entry
+
+import scala.concurrent.Future
 
 object StreamProcessing {
 
@@ -36,10 +39,11 @@ object StreamProcessing {
                              maximumShiftDays: Int): Flow[Entry, Map[Int, Double], Any] =
     Flow[Entry].sliding(2 * maximumShiftDays + 1).map {
       window =>
+        val normalizedMaximumShiftDays = window.length / 2
         calculateDifferenceInsideWindowForValue(
           window.map(x => x.currencies.getOrElse(comparativeCurrency, 0)),
-          -maximumShiftDays to maximumShiftDays,
-          window(maximumShiftDays).currencies.getOrElse(baseCurrency, 0),
+          -normalizedMaximumShiftDays to normalizedMaximumShiftDays,
+          window(normalizedMaximumShiftDays).currencies.getOrElse(baseCurrency, 0),
           Map()
         )
     }
@@ -54,6 +58,6 @@ object StreamProcessing {
       result + (counter.head -> (value - window.head)))
   }
 
-  val sumShiftedValues: Sink[Map[Int, Double], (Int, Double)] =
-    Sink.reduce[Map[Int, Double]]((map1, map2) => map1 ++ map2) //todo reduce all maps to one map by keys
+  val combineMaps: Sink[Map[Int, Double], Future[Map[Int, Double]]] =
+    Sink.fold(Map.empty[Int, Double])(_ |+| _)
 }

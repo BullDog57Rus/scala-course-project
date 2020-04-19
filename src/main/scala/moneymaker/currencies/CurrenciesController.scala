@@ -4,11 +4,11 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.util.ByteString
+import akka.stream.scaladsl.Keep
 import moneymaker.data.{DataProvider, StreamProcessing}
 
 import scala.concurrent.ExecutionContext
@@ -21,10 +21,11 @@ object CurrenciesController {
   implicit val unmarshalLocalDate: Unmarshaller[String, LocalDate] = Unmarshaller.strict(localDateString =>
     LocalDate.parse(localDateString, dateFormatter))
 
-  def currencies(implicit ac: ActorSystem, ec: ExecutionContext): Route = getCurrencies ~ getSpeeds ~ getAccelerations
+  def currencies(implicit ac: ActorSystem, ec: ExecutionContext): Route = getCurrencies ~ getSpeeds ~ getAccelerations ~
+    getMinimumShift
 
   def getCurrencies(implicit ac: ActorSystem, ec: ExecutionContext): Route =
-    (pathPrefix(currenciesPath)
+    (path(currenciesPath)
       & parameter("base".as[String] ? "RUB")
       & parameter("currency1".as[String])
       & parameter("currency2".as[String])
@@ -92,8 +93,8 @@ object CurrenciesController {
         get {
           val stream = DataProvider.getRatesInBaseCurrencyWithinPeriod(base, List(currency1, currency2), dateFrom, dateTo)
             .via(StreamProcessing.calculateShiftedValues(currency1, currency2, maximumShiftDays))
-            .to(StreamProcessing.sumShiftedValues).run()
-          complete(HttpEntity(ContentTypes.`text/plain(UTF-8)`, ByteString(stream.toString))) //todo not sure how to do it
+            .toMat(StreamProcessing.combineMaps)(Keep.right).run().map(_.minBy(_._2.abs)._1)
+          complete(StatusCodes.OK, stream.map(_.toString))
         }
     }
 }
