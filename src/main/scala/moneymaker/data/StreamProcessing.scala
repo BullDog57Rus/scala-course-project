@@ -12,6 +12,8 @@ object StreamProcessing {
 
   val formatter: Flow[Vector[String], ByteString, Any] = CsvFormatting.format()
 
+  val VS = " vs. "
+
   val calculateDerivative: Flow[Entry, Entry, Any] = Flow[Entry].sliding(2).map {
     window =>
       val today = window.last
@@ -28,7 +30,7 @@ object StreamProcessing {
     if (compare) Flow[Entry].map {
       entry =>
         Entry(entry.date,
-          Map(baseCurrency + " vs. " + comparativeCurrency ->
+          Map(baseCurrency + VS + comparativeCurrency ->
             (entry.currencies.getOrElse(baseCurrency, 0D) - entry.currencies.getOrElse(comparativeCurrency, 0D))
           )
         )
