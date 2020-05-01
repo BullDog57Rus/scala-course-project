@@ -1,16 +1,12 @@
 package moneymaker.data
 
-import akka.stream.alpakka.csv.scaladsl.CsvFormatting
 import akka.stream.scaladsl.{Flow, Sink}
-import akka.util.ByteString
 import cats.implicits._
 import moneymaker.models.Entry
 
 import scala.concurrent.Future
 
 object StreamProcessing {
-
-  val formatter: Flow[Vector[String], ByteString, Any] = CsvFormatting.format()
 
   val VS = " vs. "
 

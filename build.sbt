@@ -10,6 +10,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
   "com.typesafe.akka" %% "akka-http" % "10.1.11",
+  "com.typesafe.akka" %% "akka-http-testkit" % "10.1.11" % Test,
   "com.lightbend.akka" %% "akka-stream-alpakka-csv" % "1.1.2",
   "com.lightbend.akka" %% "akka-stream-alpakka-json-streaming" % "2.0.0-RC2",
   "org.scalatest" %% "scalatest" % "3.1.0" % Test,

@@ -44,9 +44,9 @@ class DataProviderImpl(httpClient: HttpClient)(implicit ac: ActorSystem, ec: Exe
 
 object DataProviderImpl {
 
-  def apply(implicit ac: ActorSystem, ec: ExecutionContext): DataProviderImpl =
+  def apply()(implicit ac: ActorSystem, ec: ExecutionContext): DataProvider =
     new DataProviderImpl(HttpClientImpl())
 
-  def apply(httpClient: HttpClient)(implicit ac: ActorSystem, ec: ExecutionContext): DataProviderImpl =
+  def apply(httpClient: HttpClient)(implicit ac: ActorSystem, ec: ExecutionContext): DataProvider =
     new DataProviderImpl(httpClient)
 }

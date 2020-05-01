@@ -1,22 +1,23 @@
 package moneymaker.currencies
 
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.stream.scaladsl.Keep
-import moneymaker.data.{DataProvider, DataProviderImpl, StreamProcessing}
+import akka.stream.alpakka.csv.scaladsl.CsvFormatting
+import akka.stream.scaladsl.Flow
+import akka.util.ByteString
+import moneymaker.Parameters.dateFormatter
 
 import scala.concurrent.ExecutionContext
 
-class CurrenciesController(dataProvider: DataProvider)(implicit ac: ActorSystem, ec: ExecutionContext) {
+class CurrenciesController(currenciesService: CurrenciesService)(implicit ac: ActorSystem, ec: ExecutionContext) {
 
   val currenciesPath: String = "currencies"
-  val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+  val formatter: Flow[Vector[String], ByteString, Any] = CsvFormatting.format()
 
   implicit val unmarshalLocalDate: Unmarshaller[String, LocalDate] = Unmarshaller.strict(localDateString =>
     LocalDate.parse(localDateString, dateFormatter))
@@ -34,10 +35,9 @@ class CurrenciesController(dataProvider: DataProvider)(implicit ac: ActorSystem,
       & parameter("compare".as[Boolean] ? false)) {
       (base, currency1, currency2, dateFrom, dateTo, compare) =>
         get {
-          val stream = dataProvider.getRatesInBaseCurrencyWithinPeriod(base, List(currency1, currency2), dateFrom, dateTo)
-            .via(StreamProcessing.calculateDifferenceInCurrenciesIfNeeded(currency1, currency2, compare))
+          val stream = currenciesService.getCurrencies(base, currency1, currency2, dateFrom, dateTo, compare)
             .map(_.toVector(dateFormatter))
-            .via(StreamProcessing.formatter)
+            .via(formatter)
           complete(HttpEntity(ContentTypes.`text/plain(UTF-8)`, stream))
         }
     }
@@ -52,11 +52,9 @@ class CurrenciesController(dataProvider: DataProvider)(implicit ac: ActorSystem,
       & parameter("compare".as[Boolean] ? false)) {
       (base, currency1, currency2, dateFrom, dateTo, compare) =>
         get {
-          val stream = dataProvider.getRatesInBaseCurrencyWithinPeriod(base, List(currency1, currency2), dateFrom, dateTo)
-            .via(StreamProcessing.calculateDifferenceInCurrenciesIfNeeded(currency1, currency2, compare))
-            .via(StreamProcessing.calculateDerivative)
+          val stream = currenciesService.getSpeeds(base, currency1, currency2, dateFrom, dateTo, compare)
             .map(_.toVector(dateFormatter))
-            .via(StreamProcessing.formatter)
+            .via(formatter)
           complete(HttpEntity(ContentTypes.`text/plain(UTF-8)`, stream))
         }
     }
@@ -71,12 +69,9 @@ class CurrenciesController(dataProvider: DataProvider)(implicit ac: ActorSystem,
       & parameter("compare".as[Boolean] ? false)) {
       (base, currency1, currency2, dateFrom, dateTo, compare) =>
         get {
-          val stream = dataProvider.getRatesInBaseCurrencyWithinPeriod(base, List(currency1, currency2), dateFrom, dateTo)
-            .via(StreamProcessing.calculateDifferenceInCurrenciesIfNeeded(currency1, currency2, compare))
-            .via(StreamProcessing.calculateDerivative)
-            .via(StreamProcessing.calculateDerivative)
+          val stream = currenciesService.getAccelerations(base, currency1, currency2, dateFrom, dateTo, compare)
             .map(_.toVector(dateFormatter))
-            .via(StreamProcessing.formatter)
+            .via(formatter)
           complete(HttpEntity(ContentTypes.`text/plain(UTF-8)`, stream))
         }
     }
@@ -91,9 +86,7 @@ class CurrenciesController(dataProvider: DataProvider)(implicit ac: ActorSystem,
       & parameter("maximumShiftDays".as[Int])) {
       (base, currency1, currency2, dateFrom, dateTo, maximumShiftDays) =>
         get {
-          val stream = dataProvider.getRatesInBaseCurrencyWithinPeriod(base, List(currency1, currency2), dateFrom, dateTo)
-            .via(StreamProcessing.calculateShiftedValues(currency1, currency2, maximumShiftDays))
-            .toMat(StreamProcessing.combineMaps)(Keep.right).run().map(_.minBy(_._2.abs)._1)
+          val stream = currenciesService.getMinimumShift(base, currency1, currency2, dateFrom, dateTo, maximumShiftDays)
           complete(StatusCodes.OK, stream.map(_.toString))
         }
     }
@@ -101,9 +94,9 @@ class CurrenciesController(dataProvider: DataProvider)(implicit ac: ActorSystem,
 
 object CurrenciesController {
 
-  def apply(implicit ac: ActorSystem, ec: ExecutionContext): CurrenciesController =
-    new CurrenciesController(DataProviderImpl(ac, ec))
+  def apply()(implicit ac: ActorSystem, ec: ExecutionContext): CurrenciesController =
+    new CurrenciesController(CurrenciesServiceImpl())
 
-  def apply(dataProvider: DataProvider)(implicit ac: ActorSystem, ec: ExecutionContext): CurrenciesController =
-    new CurrenciesController(dataProvider)
+  def apply(currenciesService: CurrenciesService)(implicit ac: ActorSystem, ec: ExecutionContext): CurrenciesController =
+    new CurrenciesController(currenciesService)
 }

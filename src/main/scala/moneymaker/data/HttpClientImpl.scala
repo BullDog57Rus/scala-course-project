@@ -6,13 +6,13 @@ import akka.http.scaladsl.Http
 
 import scala.concurrent.Future
 
-class HttpClientImpl extends HttpClient {
+class HttpClientImpl(implicit actorSystem: ActorSystem) extends HttpClient {
 
-  override def sendRequest(httpRequest: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] =
+  override def sendRequest(httpRequest: HttpRequest): Future[HttpResponse] =
     Http().singleRequest(httpRequest)
 }
 
 object HttpClientImpl {
 
-  def apply(): HttpClientImpl = new HttpClientImpl()
+  def apply()(implicit actorSystem: ActorSystem): HttpClient = new HttpClientImpl()
 }
